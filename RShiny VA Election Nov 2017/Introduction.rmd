@@ -1,0 +1,27 @@
+---
+output: html_document
+---
+
+In January 2017, Donald Trump took office of president of USA and he largely changed the political environment of this country. Virginia is a state close to Washington, DC, the political center of USA. There are a few questions I am really interested in:
+
+* Which party do the citizens in VA prefer, Democratic or Republican?
+* How is the voters of each party distributed? 
+* Which counties prefer Democratic Party? Which counties prefer Republican Party? Which counties are swinging counties?
+* Is there any significant difference between the rural area and urban area?
+
+This shiny app mainly focus on the state-level elections in Viginia in November, 2017 and tries to solve these questions. 
+
+I selected four state-level office elections to study:
+
+* Governor
+* Lieutenant Governor
+* Attorney General
+* Member of House Delegates
+
+I am doing this research to the people who are interested in American Politics.Besides, I think it is meaningful to display the results of the elections in Virginia and explore the charateristics of each county.
+
+This is Youtube link to my video of presentation below.
+
+[https://youtu.be/wnCrCkR4Ma8]
+
+

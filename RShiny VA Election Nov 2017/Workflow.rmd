@@ -1,0 +1,27 @@
+---
+output: html_document
+---
+
+To repreduce my shiny app, please follow the steps below.
+
+#### Files that need downloading
+
+* Virginia election raw data [https://apps.elections.virginia.gov/SBE_CSV/ELECTIONS/ELECTIONRESULTS/2017/]
+
+And I saved it as "result.txt"
+
+* Geojson file for map plotting [http://catalog.opendata.city/dataset/virginia-counties-polygon/resource/9dd40375-d30e-41cc-9e8e-e6fb26b42bf9]
+
+Please put these files with R code and R Markdown files (Introduction.rmd, Workflow.rmd) into one file folder and set the work directory as this folder.
+
+#### R libraries that need downloading
+
+* shiny
+* leaflet
+* dplyr
+* geojsonio
+* ggplot2
+* shinythemes
+* rmarkdown
+
+Then we can run the "individual product" to use the shiny app.
