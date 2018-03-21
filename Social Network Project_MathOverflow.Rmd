@@ -1,0 +1,540 @@
+---
+title: "Group 1 Project"
+author: "Guangyu Xing, Lulu Zhao, Nikitha Reghu"
+date: "February 25, 2018"
+output: html_document
+---
+##
+# 1. SETUP
+###
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(igraph)
+library(NetData)
+library(statnet)
+library(dplyr)
+```
+
+##  Group 1 Project R Markdown
+### This group project is to explore interesting interaction relations among the three types of networks and one full network of MathOverflow website by answering four questions to determine how they are interrelated, and to discern what they mean. Data resource: SNAP.Stanford University.      
+
+
+##
+# 2. LOADING DATA
+###
+## Read datasets 
+```{r}
+setwd('C:\\Users\\Russell Xing\\Desktop\\GWU\\Courses\\DNSC6215 Social Network Analytics\\Project')
+```
+
+```{r}
+mof <- read.table("sx-mathoverflow.txt")
+mof.a2q <- read.table("sx-mathoverflow-a2q.txt")
+mof.c2a <- read.table("sx-mathoverflow-c2a.txt")
+mof.c2q <- read.table("sx-mathoverflow-c2q.txt")
+
+```
+
+## Add another column with value 1
+```{r}
+mof[,3] <- 1
+mof.a2q[,3] <- 1
+mof.c2a[,3] <- 1
+mof.c2q[,3] <- 1
+
+```
+
+##  Add column names
+```{r}
+colnames(mof) <- c('ego', 'alter', 'relation')
+colnames(mof.a2q) <- c('ego', 'alter', 'relation')
+colnames(mof.c2a) <- c('ego', 'alter', 'relation')
+colnames(mof.c2q) <- c('ego', 'alter', 'relation')
+
+```
+
+
+## Clean the datasets
+```{r}
+mof.network <- distinct(mof[,1:2])
+mof.network$relation <- 1
+mof.a2q.network <- distinct(mof.a2q[,1:2])
+mof.a2q.network$relation <- 1
+mof.c2a.network <- distinct(mof.c2a[,1:2])
+mof.c2a.network$relation <- 1
+mof.c2q.network <- distinct(mof.c2q[,1:2])
+mof.c2q.network$relation <- 1
+
+```
+
+
+## Convert into network graph format
+```{r}
+mof.network <- graph.data.frame(mof[,1:3])
+mof.a2q.network <- graph.data.frame(mof.a2q[,1:3])
+mof.c2a.network <- graph.data.frame(mof.c2a[,1:3])
+mof.c2q.network <- graph.data.frame(mof.c2q[,1:3])
+
+```
+
+
+## Add another vertex attribute "weight" to the graph object
+### The added attribute "weight" represents the counts of times that users interated with each other including repetitive interactions (different from indegree and outdegree)
+
+```{r}
+ego <- seq(1, max(mof[,1]), 1)
+ego <- data.frame(ego = ego)
+
+mof.sum <- left_join(ego, summarise(group_by(mof, ego), weight = n()))
+mof.sum[is.na(mof.sum$weight), 2] <- 0
+mof.a2q.sum <- left_join(ego, summarise(group_by(mof.a2q, ego), weight = n()))
+mof.a2q.sum[is.na(mof.a2q.sum$weight), 2] <- 0
+mof.c2a.sum <- left_join(ego, summarise(group_by(mof.c2a, ego), weight = n()))
+mof.c2a.sum[is.na(mof.c2a.sum$weight), 2] <- 0
+mof.c2q.sum <- left_join(ego, summarise(group_by(mof.c2q, ego), weight = n()))
+mof.c2q.sum[is.na(mof.c2q.sum$weight), 2] <- 0
+```
+
+### Full Network
+```{r}
+for (i in V(mof.network)) {
+    mof.network <- igraph::set.vertex.attribute(mof.network, 
+                                       "weight", 
+                                       index = i, 
+                                       mof.sum[i + 1, 2])
+}
+```
+
+```{r}
+#vertex_attr(mof.network, 'weight')
+```
+
+### Answer to Question Network
+```{r}
+for (i in V(mof.a2q.network)) {
+    mof.a2q.network <- igraph::set.vertex.attribute(mof.a2q.network, 
+                                       "weight", 
+                                       index = i, 
+                                       mof.sum[i + 1, 2])
+}
+```
+
+### Comment to Answer Network
+```{r}
+for (i in V(mof.c2a.network)) {
+    mof.c2a.network <- igraph::set.vertex.attribute(mof.c2a.network, 
+                                       "weight", 
+                                       index = i, 
+                                       mof.sum[i + 1, 2])
+}
+
+```
+
+### Comment to Question Network
+```{r}
+for (i in V(mof.c2q.network)) {
+    mof.c2q.network <- igraph::set.vertex.attribute(mof.c2q.network, 
+                                       "weight", 
+                                       index = i, 
+                                       mof.sum[i + 1, 2])
+}
+```
+
+
+## Degree Counts
+```{r}
+deg.mof <- igraph::degree(mof.network)
+deg.mof.a2q <- igraph::degree(mof.a2q.network)
+deg.mof.c2a <- igraph::degree(mof.c2a.network)
+deg.mof.c2q <- igraph::degree(mof.c2q.network)
+
+```
+
+## Degree Density Histogram
+```{r}
+hist(deg.mof, breaks = 100, xlim = c(0,1000))
+hist(deg.mof.a2q, breaks = 100, xlim = c(0,200))
+hist(deg.mof.c2a, breaks = 100, xlim = c(0,1000))
+hist(deg.mof.c2q, breaks = 100, xlim = c(0,500))
+
+```
+
+
+## Density of the Graphs: the ratio of the number of edges and the number of possible edges.
+```{r}
+graph.density(mof.network)
+graph.density(mof.a2q.network)
+graph.density(mof.c2a.network)
+graph.density(mof.c2q.network)
+
+```
+
+## Reciprocity
+```{r}
+reciprocity(mof.network)
+reciprocity(mof.a2q.network)
+reciprocity(mof.c2a.network)
+reciprocity(mof.c2q.network)
+
+```
+
+## Transitivity
+```{r}
+transitivity(mof.network)
+transitivity(mof.a2q.network)
+transitivity(mof.c2a.network)
+transitivity(mof.c2q.network)
+
+```
+
+## Triad Census
+```{r}
+census_labels = c('003','012','102','021D','021U','021C','111D','111U','030T','030C','201','120D','120U','120C','210','300')
+
+```
+
+
+### Full
+```{r}
+tc.full <- igraph::triad.census(mof.network)
+triad.df <- data.frame(census_labels,tc.full)
+
+```
+### Delete 003 type triad since there is no connection among three nodes
+```{r}
+triad.df <-triad.df [-c(1), ]
+triad.df 
+```
+
+
+### Plot Full
+```{r}
+barplot(height = triad.df[,2], names.arg = triad.df[,1])
+
+```
+
+
+### Answer to Question
+```{r}
+tc.a2q <- igraph::triad.census(mof.a2q.network)
+triad.a2q <- data.frame(census_labels,tc.a2q)
+
+```
+
+### Delete 003 type triad since there is no connection among three nodes
+```{r}
+triad.a2q<-triad.a2q[-c(1), ]
+triad.a2q
+```
+
+### Plot Answer to Question
+```{r}
+barplot(height = triad.a2q[,2], names.arg = triad.a2q[,1])
+
+```
+
+### Comment to Answer
+```{r}
+tc.c2a <- igraph::triad.census(mof.c2a.network)
+triad.c2a <- data.frame(census_labels,tc.c2a)
+triad.c2a
+
+```
+
+
+### Delete 003 type triad since there is no connection among three nodes
+```{r}
+triad.c2a<-triad.a2q[-c(1), ]
+triad.c2a
+```
+
+### Plot Comment to Answer
+```{r}
+barplot(height = triad.c2a[,2], names.arg = triad.c2a[,1])
+
+```
+
+### Comment to Question
+
+```{r}
+tc.c2q <- igraph::triad.census(mof.c2q.network)
+triad.c2q <- data.frame(census_labels,tc.c2q)
+triad.c2q
+
+```
+
+
+### Delete 003 type triad since there is no connection among three nodes
+```{r}
+triad.c2q<-triad.a2q[-c(1), ]
+triad.c2q
+```
+
+### Plot Comment to Question
+```{r}
+barplot(height = triad.c2q[,2], names.arg = triad.c2q[,1])
+
+```
+
+
+
+  
+##
+# 3. CALCULATE CENTRALITY MEASURES 
+###
+## Indegree centrality measures how many users directly interact to the individual. 
+```{r}
+mof.network.in.dg <- igraph::degree(mof.network, mode='in')
+hist(mof.network.in.dg, breaks = 200, xlim = c(0,300))
+
+mof.a2q.in.dg <- igraph::degree(mof.a2q.network, mode='in')
+hist(mof.a2q.in.dg)
+
+mof.c2a.in.dg <- igraph::degree(mof.c2a.network, mode='in')
+hist(mof.c2a.in.dg)
+
+mof.c2q.in.dg <- igraph::degree(mof.c2q.network, mode='in')
+hist(mof.c2q.in.dg)
+
+```
+
+## Outdegree centrality measures how many users were directly interacted
+```{r}
+mof.network.out.dg <- igraph::degree(mof.network, mode='out')
+hist(mof.network.out.dg, breaks = 200, xlim = c(0,300))
+
+mof.a2q.out.dg <- igraph::degree(mof.a2q.network, mode='out')
+hist(mof.a2q.out.dg)
+
+mof.c2a.out.dg <- igraph::degree(mof.c2a.network, mode='out')
+hist(mof.c2a.out.dg)
+
+mof.c2q.out.dg <-igraph:: degree(mof.c2q.network, mode='out')
+hist(mof.c2q.out.dg)
+
+```
+
+## In-closeness centrality
+#### In a directed network, we can think of in-closeness centrality as the average number of steps one would have to go through to get TO a given node FROM all other reachable nodes in the network
+
+```{r}
+mof.network.incloseness <- igraph::closeness(mof.network, mode='in')
+hist(mof.network.incloseness)
+
+mof.a2q.incloseness <- igraph::closeness(mof.a2q.network, mode='in')
+hist(mof.a2q.incloseness)
+
+mof.c2a.incloseness <- igraph::closeness(mof.c2a.network, mode='in')
+hist(mof.c2a.incloseness)
+
+mof.c2q.incloseness <- igraph::closeness(mof.c2q.network, mode='in')
+hist(mof.c2q.incloseness)
+
+
+```
+
+## Out-closeness centrality
+#### Out-closeness centrality measures the same thing with the directionality reversed.
+```{r}
+mof.network.outcloseness <- igraph::closeness(mof.network, mode='out')
+hist(mof.network.outcloseness)
+
+mof.network.outcloseness <- igraph::closeness(mof.network, mode='out')
+hist(mof.network.outcloseness)
+
+mof.a2q.outcloseness <- igraph::closeness(mof.a2q.network, mode='out')
+hist(mof.a2q.outcloseness)
+
+mof.c2a.outcloseness <- igraph::closeness(mof.c2a.network, mode='out')
+hist(mof.c2a.outcloseness)
+
+mof.c2q.outcloseness <- igraph::closeness(mof.c2q.network, mode='out')
+hist(mof.c2q.outcloseness)
+```
+
+## Betweenness centrality
+```{r}
+mof.network.betweenness <- igraph::betweenness(mof.network)
+hist(mof.network.betweenness, breaks = 500, xlim = c(0,500000))
+
+mof.a2q.betweenness <- igraph::betweenness(mof.a2q.network)
+hist(mof.a2q.betweenness)
+
+mof.c2a.betweenness <- igraph::betweenness(mof.c2a.network)
+hist(mof.c2a.betweenness)
+
+mof.c2q.betweenness <- igraph::betweenness(mof.c2q.network)
+hist(mof.c2q.betweenness)
+
+```
+
+## Eigenvector centrality
+### Symmetrize to generate an undirected eigenvector centrality score
+```{r}
+mof.network.undirected <- igraph::as.undirected(mof.network, mode='collapse')
+
+```
+
+```{r}
+mof.ev_obj <- igraph::evcent(mof.network.undirected)
+mof.eigen <- mof.ev_obj$vector
+#mof.eigen
+```
+
+```{r}
+hist(mof.eigen, breaks=100,xlim = c(0,0.2))
+```
+## Construct a data frame with the vertices as rows and the centrality scores as columns.
+```{r}
+mof_network <- data.frame(V(mof.network)$name , mof.network.in.dg , mof.network.out.dg, mof.network.incloseness, mof.network.outcloseness, mof.network.betweenness, mof.eigen)
+#mof_network
+
+```
+
+### Centrality Ranks
+```{r}
+mof_network$mof.network.in.dg[order(-mof_network$mof.network.in.dg)][1:10]
+mof_network$mof.network.out.dg[order(-mof_network$mof.network.out.dg)][1:10]
+mof_network$mof.network.incloseness[order(-mof_network$mof.network.incloseness)][1:10]
+mof_network$mof.network.outcloseness[order(-mof_network$mof.network.outcloseness)][1:10]
+mof_network$mof.network.betweenness[order(-mof_network$mof.network.betweenness)][1:10]
+mof_network$mof.eigen[order(-mof_network$mof.eigen)][1:10]
+
+```
+
+
+
+##
+# 4. CORRELATIONS BETWEEN CENTRALITY MEASURES
+###
+### Compute correlations betwee the columns to determine how closely these measures of centrality are interrelated. 
+## Generate a table of pairwise correlations
+```{r}
+cor(mof_network[,2:7])
+```
+
+
+## INTERPRETATION:
+###
+### Indegree and outdegree are very closely correlated (rho = 0.895), indicating that the interaction on Math Overflow (i,e, answer and comment) with others is reciprocated, that is, if you answer or comment to others, they tend to feed back to you.
+### 
+### The same is not true of incloseness and outcloseness (rho = -0.129), indicating that the closeness calculated from inbound paths is not strongly associated with with closeness from outbound paths.
+### 
+### In- and out-degree are highly correlated with eigenvector centrality, indicating that the Math Overflow users that answer/comment the most to others (or, relatedly, are fed back to the most by others) are also the ones that are connected to other highly connected users -- possibly indicating high density cliques around these individuals.
+### 
+### Betweenness shows the highest correlation with indegree, followed by outdegree. In the case of this particular network, it seems that the individuals that interact to the most others are the likeliest to serve as bridges between the particular cliques.
+
+
+##
+# 5. ERGM Model
+###
+### Use the network datasets and the added attribute data "weight" to figure out if we can generate a network model to predict the interaction of the users by knowing the characteristics of the underlying mechanisms.
+
+### The added attribute "weight" represents the counts of times that users interacted with each other including repetitive interactions (different from indegree and outdegree)
+
+
+```{r, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+library(statnet)
+library(ergmharris)
+library(intergraph)
+```
+
+## Convert the graphs
+```{r}
+mof.network2 <- asNetwork(mof.network)
+mof.a2q.network2 <- asNetwork(mof.a2q.network)
+mof.c2a.network2 <- asNetwork(mof.c2a.network)
+mof.c2q.network2 <- asNetwork(mof.c2q.network)
+```
+
+
+## Full
+```{r}
+l1 = ergm(mof.network2 ~ edges)
+summary(l1)
+```
+
+
+```{r}
+l2 = ergm(mof.network2 ~ edges + mutual)
+summary(l2)
+```
+
+
+```{r}
+plogis(coef(l2)[['edges']])
+```
+
+
+```{r}
+plogis(coef(l2)[['edges']] + coef(l2)[['mutual']])
+```
+
+
+
+```{r}
+l3=ergm(mof.network2 ~ edges + mutual+ nodecov("weight"))
+summary(l3)
+```
+
+
+<!-- ## Answer to Question -->
+<!-- ```{r} -->
+
+<!-- m1 = ergm(mof.a2q.network2 ~ edges) -->
+<!-- summary(m1) -->
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- m2 = ergm(mof.a2q.network2 ~ edges + mutual) -->
+<!-- summary(m2) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- m3=ergm(mof.a2q.network2 ~ edges + mutual+ nodecov("weight")) -->
+<!-- summary(m3) -->
+<!-- ``` -->
+
+
+<!-- ## Comment to Answer -->
+<!-- ```{r} -->
+
+<!-- n1 = ergm(mof.c2a.network2 ~ edges) -->
+<!-- summary(n1) -->
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- n2 = ergm(mof.c2a.network2 ~ edges + mutual) -->
+<!-- summary(n2) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- n3=ergm(mof.c2a.network2 ~ edges + mutual+ nodecov("weight")) -->
+<!-- summary(n3) -->
+<!-- ``` -->
+
+
+
+<!-- ## Comment to Question -->
+<!-- ```{r} -->
+
+<!-- p1 = ergm(mof.c2q.network2 ~ edges) -->
+<!-- summary(p1) -->
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- p2 = ergm(mof.c2q.network2 ~ edges + mutual) -->
+<!-- summary(p2) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- p3=ergm(mof.c2q.network2 ~ edges + mutual+ nodecov("weight")) -->
+<!-- summary(p3) -->
+<!-- ``` -->
+
+
